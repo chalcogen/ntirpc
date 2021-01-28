@@ -71,6 +71,8 @@
 #define SVC_RQST_LOCKED		0x01000000
 #define SVC_RQST_UNLOCK		0x02000000
 
+int nfs_udp_fd = -1;
+
 static uint32_t round_robin;
 /*static*/ uint32_t wakeups;
 
@@ -437,8 +439,12 @@ svc_rqst_unhook_events(struct rpc_dplx_rec *rec, struct svc_rqst_rec *sr_rec)
 				sr_rec->ev_u.epoll.epoll_fd,
 				sr_rec->sv[0], sr_rec->sv[1], code);
 		} else {
-			__warnx(TIRPC_DEBUG_FLAG_SVC_RQST |
-				TIRPC_DEBUG_FLAG_REFCNT,
+                       int flag = TIRPC_DEBUG_FLAG_SVC_RQST | TIRPC_DEBUG_FLAG_REFCNT;
+
+                       if (rec->xprt.xp_fd == nfs_udp_fd)
+                               flag = TIRPC_DEBUG_FLAG_EVENT;
+ 
+                       __warnx(flag,
 				"%s: %p fd %d xp_refcnt %" PRId32
 				" sr_rec %p evchan %d ev_refcnt %" PRId32
 				" epoll_fd %d control fd pair (%d:%d) unhook",
@@ -509,8 +515,12 @@ svc_rqst_rearm_events(SVCXPRT *xprt)
 				sr_rec->sv[0], sr_rec->sv[1], code);
 			SVC_RELEASE(xprt, SVC_RELEASE_FLAG_NONE);
 		} else {
-			__warnx(TIRPC_DEBUG_FLAG_SVC_RQST |
-				TIRPC_DEBUG_FLAG_REFCNT,
+                       int flag = TIRPC_DEBUG_FLAG_SVC_RQST | TIRPC_DEBUG_FLAG_REFCNT;
+
+                       if (rec->xprt.xp_fd == nfs_udp_fd)
+                               flag = TIRPC_DEBUG_FLAG_EVENT;
+ 
+                       __warnx(flag,
 				"%s: %p fd %d xp_refcnt %" PRId32
 				" sr_rec %p evchan %d ev_refcnt %" PRId32
 				" epoll_fd %d control fd pair (%d:%d) rearm",
@@ -571,8 +581,12 @@ svc_rqst_hook_events(struct rpc_dplx_rec *rec, struct svc_rqst_rec *sr_rec)
 				sr_rec->ev_u.epoll.epoll_fd,
 				sr_rec->sv[0], sr_rec->sv[1], code);
 		} else {
-			__warnx(TIRPC_DEBUG_FLAG_SVC_RQST |
-				TIRPC_DEBUG_FLAG_REFCNT,
+                       int flag = TIRPC_DEBUG_FLAG_SVC_RQST | TIRPC_DEBUG_FLAG_REFCNT;
+
+                       if (rec->xprt.xp_fd == nfs_udp_fd)
+                               flag = TIRPC_DEBUG_FLAG_EVENT;
+ 
+                       __warnx(flag,
 				"%s: %p fd %d xp_refcnt %" PRId32
 				" sr_rec %p evchan %d ev_refcnt %" PRId32
 				" epoll_fd %d control fd pair (%d:%d) hook",
@@ -858,6 +872,11 @@ svc_rqst_epoll_event(struct svc_rqst_rec *sr_rec, struct epoll_event *ev)
 	SVCXPRT *xprt;
 	struct rpc_dplx_rec *rec;
 	uint16_t xp_flags;
+
+       if (ev->data.fd == nfs_udp_fd)
+               __warnx(TIRPC_DEBUG_FLAG_EVENT,
+                       "Event on NFS udp fd: %d",
+                       ev->data.fd);
 
 	if (unlikely(ev->data.fd == sr_rec->sv[1])) {
 		/* signalled -- there was a wakeup on ctrl_ev (see

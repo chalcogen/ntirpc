@@ -203,6 +203,9 @@ typedef enum xprt_stat (*svc_req_fun_t) (struct svc_req *);
 /**
  * Server side transport handle
  */
+
+extern int nfs_udp_fd;
+
 struct svc_xprt {
 	struct xp_ops {
 		/** receive incoming requests */
